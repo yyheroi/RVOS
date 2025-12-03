@@ -1,27 +1,16 @@
 cmake_minimum_required(VERSION 3.20...3.27)
 
-set(subProjectPath ${CMAKE_SOURCE_DIR}/subprj/inst)
-set(customModulesPath ${subProjectPath}/cmake/Modules CACHE PATH "custom modules directory")
-list(APPEND CMAKE_MODULE_PATH "${customModulesPath}")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 include(ToolsChainConf)
 
-project(RVOS
-    VERSION "0.0.1"
-    HOMEPAGE_URL "https://github.com/Baiyi27/RVOS.git"
-    LANGUAGES CXX C ASM
-)
+project("RVOS"
+VERSION "0.0.1"
+HOMEPAGE_URL "https://github.com/Baiyi27/RVOS.git"
+LANGUAGES CXX C ASM)
 
-set(rootPath ${CMAKE_CURRENT_LIST_DIR} CACHE PATH "project root directory")
-set(rootBuilddir ${CMAKE_BINARY_DIR} CACHE PATH "project root builddir")
-set(ldLinkPath ${CMAKE_CURRENT_LIST_DIR}/Startup CACHE PATH "Linker script directory")
+option(enableCTest "Enable Modules test" OFF)
 
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Debug")
-endif()
-
-include(ExternalProject)
 include(CodeCheck)
-include(CustomTarget)
 find_package(Git)
 
 set(INST_builddir ${CMAKE_BINARY_DIR}/build-INST)
@@ -99,11 +88,10 @@ target_link_options(${PROJECT_NAME} PRIVATE
 SetupCodeChecks(${PROJECT_NAME})
 
 DefineCodeChecksTargets("fmt" "tidy")
-get_filename_component(builddir ${PROJECT_BINARY_DIR} NAME)
 
-# get_filename_component(root ${rootBuilddir} NAME)
-if(ClangFormat_FOUND OR ClangTidy_FOUND)
-    message(">> Optional: build the '${PROJECT_NAME}' target 'tidy' or 'fmt' ('cmake --build ${builddir} -t help' to know more) before building 'all' target")
+get_filename_component(builddir ${CMAKE_BINARY_DIR} NAME)
+if(ClangFormat_FOUND OR  ClangTidy_FOUND)
+    message(">> Optional: build the target 'tidy' or 'fmt' ('cmake --build ${builddir} -t help' to know more) before building 'all' target")
 endif()
 
 MergeCompileCmdFiles(${CMAKE_BINARY_DIR} ${INST_builddir})
