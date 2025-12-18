@@ -1,17 +1,16 @@
 cmake_minimum_required(VERSION 3.20...3.27)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
-include(ToolsChainConf)
+project(multipleProjects)
 
-project("RVOS"
-VERSION "0.0.1"
-HOMEPAGE_URL "https://github.com/Baiyi27/RVOS.git"
-LANGUAGES CXX C ASM)
+include(ExternalProject)
 
-option(enableCTest "Enable Modules test" OFF)
+set(rootPath ${CMAKE_CURRENT_LIST_DIR} CACHE PATH "project root directory")
+set(rootBuilddir ${CMAKE_BINARY_DIR} CACHE PATH "project root builddir")
+set(customModulesPath ${rootPath}/cmake/Modules CACHE PATH "custom modules directory")
 
-include(CodeCheck)
-find_package(Git)
+set(subProjectPath ${CMAKE_SOURCE_DIR}/lib)
+set(RVOS_builddir ${CMAKE_BINARY_DIR}/build-RVOS)
+set(INST_builddir ${CMAKE_BINARY_DIR}/build-INST)
 
 set(INST_builddir ${CMAKE_BINARY_DIR}/build-INST)
 
