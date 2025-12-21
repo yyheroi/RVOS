@@ -53,16 +53,20 @@ elseif(EXISTS "${vscodeServerFolder}" AND IS_DIRECTORY "${vscodeServerFolder}")
     file(GLOB matchedPaths "${vscodeServerFolder}/${extensionPathSuffix}")
 endif()
 
+message(VERBOSE "matchedPaths: '${matchedPaths}'")
+
 if(matchedPaths)
     list(LENGTH matchedPaths pathCount)
     math(EXPR lastIdx "${pathCount} - 1")
     list(GET matchedPaths ${lastIdx} targetSearchPath)
 endif()
 
+message(VERBOSE "targetSearchPath: '${targetSearchPath}'")
+
 # First search the PATH and specific locations for clang-tidy.
 find_program(clangTidyExe
     NAMES ${clangTidyNames}
-    PATHS ${vscodeClangToolsPath}
+    PATHS ${targetSearchPath}
     DOC "clang-tidy command line client"
 )
 

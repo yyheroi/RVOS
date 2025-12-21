@@ -51,7 +51,7 @@ elseif(EXISTS "${vscodeServerFolder}" AND IS_DIRECTORY "${vscodeServerFolder}")
     file(GLOB matchedPaths "${vscodeServerFolder}/${extensionPathSuffix}")
 endif()
 
-message(VERBOSE "1. ${matchedPaths}")
+message(VERBOSE "matchedPaths: '${matchedPaths}'")
 
 if(matchedPaths)
     list(LENGTH matchedPaths pathCount)
@@ -59,7 +59,7 @@ if(matchedPaths)
     list(GET matchedPaths ${lastIdx} targetSearchPath)
 endif()
 
-message(VERBOSE "2. ${targetSearchPath}")
+message(VERBOSE "targetSearchPath: '${targetSearchPath}'")
 
 # First search the PATH and specific locations for clang-format.
 find_program(clangFormatExe
