@@ -126,6 +126,7 @@ target_sources(${backend} PRIVATE
     src/ISA/Regs.cc
 
     inc/Util/BiLookupTable.hpp
+    inc/Log/Logger.hpp
 
     inc/Core/IBaseInstType.hh
     src/Core/IBaseInstType.cc
