@@ -100,7 +100,7 @@ if(ClangTidy_FOUND) # don't use ${ClangTidy_FOUND}
         get_property(allTidyFiles GLOBAL PROPERTY checkTidyFiles)
 
         if(allTidyFiles)
-            set(cmds ${doClangTidy} -p ${CMAKE_BINARY_DIR} ${allTidyFiles})
+            set(cmds ${doClangTidy} --system-headers=false -p ${CMAKE_BINARY_DIR} ${allTidyFiles})
 
             # set(cmds ${doClangTidy} ${allTidyFiles})
             message(VERBOSE ++> ${cmds})
@@ -121,14 +121,16 @@ else()
     message(WARNING "clang-tidy not found; tidy target disabled")
 endif()
 
-function(SetupCodeChecks target)
-    if(ClangFormat_FOUND)
-        FormatCode(${target})
-    endif()
+function(SetupCodeChecks)
+    foreach(target IN LISTS ARGV)
+        if(ClangFormat_FOUND AND TARGET ${target})
+            FormatCode(${target})
+        endif()
 
-    if(ClangTidy_FOUND)
-        TidyCode(${target})
-    endif()
+        if(ClangTidy_FOUND AND TARGET ${target})
+            TidyCode(${target})
+        endif()
+    endforeach()
 endfunction()
 
 function(DefineCodeChecksTargets fmtName tidyName)

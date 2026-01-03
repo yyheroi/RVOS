@@ -66,8 +66,8 @@ function(MergeCompileCmdFiles)
 
     add_custom_target(
         merge_compile_commands
-        ALL
-        COMMAND ${Python3_EXECUTABLE} ${rootPath}/scripts/python/mg_compile_cmd_flies.py ${outputFile} ${inputFiles}
+        # ALL
+        COMMAND ${Python3_EXECUTABLE} ${rootPath}/scripts/python/mg_compile_cmd_files.py ${outputFile} ${inputFiles}
         # DEPENDS RVOS INST
         COMMENT "Merging '${jsonName}' files to '${outputFile}'"
         VERBATIM
