@@ -1,5 +1,6 @@
 #include <functional>
 #include <gdkmm.h>
+#include <format>
 #include "Gui/InstFormatUI.hh"
 
 static void appendCopyAndToViewButtons(Gtk::Box &row, InstFormatUI *pUI,

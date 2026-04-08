@@ -34,6 +34,9 @@ public:
     RISCVInstructionWindow();
     ~RISCVInstructionWindow()= default;
 
+    /** Same as clicking "Parse Instruction" (for scripted / demo UI). */
+    void parseCurrentEntry();
+
 private:
     void onInsButtonParseClicked();
     void showInsResult(Instruction &inst);
