@@ -1,6 +1,4 @@
-/* os_start.S simple memory management
-*/
-
+/* os_start.S */
 .section .text._start
 .global _start
 .type _start, @function
@@ -30,23 +28,32 @@ _start:
     addi t1, t1, 8
     j 1b
 
-    /* 3) zero .bss */
 2:
     la t0, _sbss
     la t1, _ebss
+
 3:
     bgeu t0, t1, 4f
     sd zero, 0(t0)
     addi t0, t0, 8
     j 3b
 
-    /* 4) jump to C++ entry */
 4:
-    call KernelInit
+    la t0, __sbss_start
+    la t1, __sbss_end
 
-    /* KernelInit should not return on bare-metal */
 5:
-    wfi
+    bgeu t0, t1, 6f
+    sd zero, 0(t0)
+    addi t0, t0, 8
     j 5b
+
+6:
+    call KernelInit
+    /* KernelInit should not return on bare-metal */
+
+7:
+    wfi
+    j 7b
 
 .size _start, . - _start

@@ -26,47 +26,74 @@ find_package(Git)
 
 set(INST_builddir ${CMAKE_BINARY_DIR}/build-INST)
 
-ExternalProject_Add(
-    INST
-    SOURCE_DIR ${subProjectPath}
-    BINARY_DIR ${INST_builddir}
+# ExternalProject_Add(
+# INST
+# SOURCE_DIR ${subProjectPath}
+# BINARY_DIR ${INST_builddir}
 
-    CMAKE_ARGS
-    -DCMAKE_MODULE_PATH=${customModulesPath}
-    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-    -DrootBuilddir=${rootBuilddir}
+# CMAKE_ARGS
+# -DCMAKE_MODULE_PATH=${customModulesPath}
+# -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+# -DrootBuilddir=${rootBuilddir}
 
-    # -DrootPath=${rootPath}
-    INSTALL_COMMAND ""
-)
-
+# # -DrootPath=${rootPath}
+# INSTALL_COMMAND ""
+# )
 add_executable(${PROJECT_NAME})
-add_subdirectory(asm)
 
+# add_subdirectory(asm)
 target_include_directories(${PROJECT_NAME} PRIVATE
     inc
 )
 
 target_sources(${PROJECT_NAME} PRIVATE
 
-    src/kernel.cc
+    ${ldLinkPath}/os_start.S
+    # src/Lib/syscalls.c
+
+    # src/Lib/sysmem.c
+    # src/Lib/Runtime.cc
+    src/Kernel.cc
+    # src/Drivers/uart.c
+
+    inc/Drivers/Peripheral.hh
+    src/Drivers/Peripheral.cc
+    inc/Drivers/Uart.hh
+    src/Drivers/Uart.cc
 )
 
 target_compile_options(${PROJECT_NAME} PRIVATE
-    -march=rv64gcv
+    -march=rv64imacv
     -mabi=lp64d
     -mcmodel=medany
+    -msmall-data-limit=0
+    -D__PICOLIBC_NO_THREADS=1
+    -fPIC
+    # -mcmodel=large
 )
 
 target_link_options(${PROJECT_NAME} PRIVATE
-    -nostdlib
-    # -nostartfiles
-    # -nodefaultlibs
-    -lstdc++
-    -lc
-    -lgcc
 
-    -Ttext=0x80000000
+    # -nostdlib
+    -nostartfiles
+    --specs=picolibcpp.specs
+    # -nostdlib++
+    # -nodefaultlibs
+
+    # --specs=nano.specs
+    # --specs=nosys.specs
+    -march=rv64imacv
+    -mabi=lp64d
+    -mcmodel=medany
+
+    # -lstdc++
+    # -lsupc++
+    # -lc
+    # -lgcc
+    # -lm
+
+    # -T ${ldLinkPath}/_os_start.ld
+    -T ${ldLinkPath}/qemu-virt.ld
     -Wl,-Map=${CMAKE_BINARY_DIR}/${PROJECT_NAME}.map
 )
 SetupCodeChecks(${PROJECT_NAME})
@@ -81,4 +108,7 @@ endif()
 
 MergeCompileCmdFiles(${CMAKE_BINARY_DIR} ${INST_builddir})
 add_dependencies(RVOS merge_compile_commands)
-add_dependencies(INST merge_compile_commands)
+RunInQEMU(${PROJECT_NAME})
+GenerateASMFile(${PROJECT_NAME} "-DCS")
+
+# add_dependencies(INST merge_compile_commands)
