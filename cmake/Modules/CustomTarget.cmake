@@ -2,6 +2,7 @@
 set(scriptsPath ${rootPath}/scripts)
 
 function(RunInQEMU target)
+    set(kernel_elf "$<TARGET_FILE:${target}>")
     set(cmds
         qemu-system-riscv64
         -nographic
@@ -10,7 +11,8 @@ function(RunInQEMU target)
         -bios none
         -serial mon:stdio
         -no-reboot
-        -kernel ${target}
+        -kernel
+        "${kernel_elf}"
     )
 
     add_custom_target(
@@ -21,7 +23,7 @@ function(RunInQEMU target)
     )
     add_custom_target(
         dbg-${target}
-        COMMAND bash "${scriptsPath}/shell/qemu_debug.sh" ${target}
+        COMMAND bash "${scriptsPath}/shell/qemu_debug.sh" "${kernel_elf}"
         DEPENDS ${target}
         COMMENT "Run ${target} in QEMU and attach GDB"
         VERBATIM

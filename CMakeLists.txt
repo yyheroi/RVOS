@@ -1,12 +1,21 @@
 cmake_minimum_required(VERSION 3.20...3.27)
 
-project(multipleProjects)
+# 裸机 + picolibc：try_compile 若链接可执行文件，不会带 --specs / picolibc.ld，crt0 会缺 __data_*、__stack 等。
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
+project(multipleProjects LANGUAGES CXX C ASM)
 
 include(ExternalProject)
 
 set(rootPath ${CMAKE_CURRENT_LIST_DIR} CACHE PATH "project root directory")
 set(rootBuilddir ${CMAKE_BINARY_DIR} CACHE PATH "project root builddir")
 set(customModulesPath ${rootPath}/cmake/Modules CACHE PATH "custom modules directory")
+list(APPEND CMAKE_MODULE_PATH "${customModulesPath}")
+include(CodeCheck)
+include(CustomTarget)
+include(CheckLibstdcxxRiscvMedany)
+
+set(ldLinkPath ${CMAKE_CURRENT_LIST_DIR}/Startup CACHE PATH "Linker script directory")
 
 set(subProjectPath ${CMAKE_SOURCE_DIR}/lib)
 set(RVOS_builddir ${CMAKE_BINARY_DIR}/build-RVOS)
@@ -28,6 +37,10 @@ set(INST_builddir ${CMAKE_BINARY_DIR}/build-INST)
 # INSTALL_COMMAND ""
 # )
 add_executable(${PROJECT_NAME})
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    CXX_STANDARD 20
+    CXX_STANDARD_REQUIRED ON
+)
 
 # add_subdirectory(asm)
 target_include_directories(${PROJECT_NAME} PRIVATE
@@ -36,8 +49,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 target_sources(${PROJECT_NAME} PRIVATE
 
+    ${ldLinkPath}/qemu_boot_trampoline.S
     ${ldLinkPath}/os_start.S
-    # src/Lib/syscalls.c
+    src/Lib/syscalls.c
 
     # src/Lib/sysmem.c
     # src/Lib/Runtime.cc
@@ -51,18 +65,18 @@ target_sources(${PROJECT_NAME} PRIVATE
 )
 
 target_compile_options(${PROJECT_NAME} PRIVATE
+    $<$<COMPILE_LANGUAGE:C>:--specs=picolibcpp.specs>
+    $<$<COMPILE_LANGUAGE:CXX>:--specs=picolibcpp.specs>
     -march=rv64imacv
     -mabi=lp64d
     -mcmodel=medany
     -msmall-data-limit=0
-    -D__PICOLIBC_NO_THREADS=1
-    -fPIC
-    # -mcmodel=large
+    $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
+    $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
 )
 
+# 链接到 0x80000000 时，medlow 的 libstdc++.a（R_RISCV_HI20）会失败；须 medany 的 libstdc++。configure 时由 CheckLibstdcxxRiscvMedany.cmake 检测。
 target_link_options(${PROJECT_NAME} PRIVATE
-
-    # -nostdlib
     -nostartfiles
     --specs=picolibcpp.specs
     # -nostdlib++
@@ -82,7 +96,9 @@ target_link_options(${PROJECT_NAME} PRIVATE
 
     # -T ${ldLinkPath}/_os_start.ld
     -T ${ldLinkPath}/qemu-virt.ld
+    -Wl,-e,rvos_qemu_entry
     -Wl,-Map=${CMAKE_BINARY_DIR}/${PROJECT_NAME}.map
+    -Wl,--no-warn-rwx-segments
 )
 SetupCodeChecks(${PROJECT_NAME})
 
@@ -94,7 +110,7 @@ if(ClangFormat_FOUND OR  ClangTidy_FOUND)
 endif()
 
 MergeCompileCmdFiles(${CMAKE_BINARY_DIR} ${INST_builddir})
-add_dependencies(RVOS merge_compile_commands)
+add_dependencies(${PROJECT_NAME} merge_compile_commands)
 RunInQEMU(${PROJECT_NAME})
 GenerateASMFile(${PROJECT_NAME} "-DCS")
 
