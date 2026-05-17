@@ -67,6 +67,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 target_link_options(${PROJECT_NAME} PRIVATE
     ${_64bitCommonOpts}
     ${specsFile}
+    --oslib=semihost
 
     # -nostdlib
     # -nostartfiles
