@@ -1,14 +1,18 @@
-// #include <cstdio>
-// #include <stdio.h>
-// #include <stdlib.h>
+#include <cstdio>
 
-int SystemInit()
+#include "Arch/Trap/trap.hh"
+#include "Arch/CSR/CsrManager.hh"
+#include "trap_test.hh"
+
+extern "C" void KernelInit(void)
 {
-    return 0;
+    TrapInit();
+    std::printf("Hello, RVOS\n");
+    TrapTest();
 }
 
 int main()
 {
-    SystemInit();
+    KernelInit();
     return 0;
 }

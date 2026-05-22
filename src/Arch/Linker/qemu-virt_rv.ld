@@ -18,3 +18,13 @@ PROVIDE(_sbss = __non_tls_bss_start);
 PROVIDE(_ebss = __bss_end);
 PROVIDE(__sbss_start = __bss_end);
 PROVIDE(__sbss_end = __bss_end);
+
+SECTIONS
+{
+    . = __flash;
+
+    .mvec : {
+        . = ALIGN(4);
+        KEEP(*(.text.mvec_table))
+    }
+}
