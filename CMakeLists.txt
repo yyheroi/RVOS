@@ -20,11 +20,15 @@ endif()
 set(rootPath ${CMAKE_CURRENT_LIST_DIR} CACHE PATH "project root directory")
 set(rootBuilddir ${CMAKE_BINARY_DIR} CACHE PATH "project root builddir")
 set(_64bitCommonOpts -march=rv64gc -mabi=lp64d -mcmodel=medany)
-set(specsFile
-    $<$<COMPILE_LANGUAGE:C>:--specs=picolibc.specs>
+# Same shape as 39b813e. Do NOT use LINK_LANGUAGE here: this list is passed to
+# target_compile_options as well as target_link_options. ASM needs picolibc.specs
+# so Debug --oslib=semihost is recognized when assembling .S.
+set(compileSpecs
+    $<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:ASM>>:--specs=picolibc.specs>
     $<$<COMPILE_LANGUAGE:CXX>:--specs=picolibcpp.specs>
     $<$<CONFIG:Debug>:--oslib=semihost>
 )
+
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 
 include(ExternalProject)
@@ -54,8 +58,6 @@ if(enableINST)
     add_dependencies(INST merge_compile_commands)
 endif()
 
-DefineCodeChecksTargets("fmt" "tidy")
-
 add_subdirectory(src/Arch)
 add_subdirectory(src/HAL)
 add_subdirectory(src/Kernel)
@@ -70,6 +72,10 @@ if(enableTests)
     enable_testing()
     add_subdirectory(tests)
 endif()
+
+# Must run after SetupCodeChecks() in subdirs have collected sources;
+# otherwise fmt/tidy see an empty file list and are not created.
+DefineCodeChecksTargets("fmt" "tidy")
 
 get_filename_component(builddir ${PROJECT_BINARY_DIR} NAME)
 

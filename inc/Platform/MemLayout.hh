@@ -49,6 +49,6 @@ inline constexpr uint8_t G_UART0_IRQ   = 10;
 /** QEMU models 16550 with classic 1.8432 MHz baud clock. */
 inline constexpr uint32_t G_UART0_CLOCK_HZ= 1843200;
 
-NS16550A g_uart0(G_UART0_BASE, G_UART0_IRQ, G_UART0_CLOCK_HZ);
+inline NS16550A g_uart0(G_UART0_BASE, G_UART0_IRQ, G_UART0_CLOCK_HZ); // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
 } // namespace dts::qemu

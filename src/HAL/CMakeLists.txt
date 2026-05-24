@@ -14,5 +14,5 @@ target_include_directories(${module} PUBLIC ${halIncDir})
 
 target_compile_options(${module} PRIVATE
     ${_64bitCommonOpts}
-    ${specsFile}
+    ${compileSpecs}
 )

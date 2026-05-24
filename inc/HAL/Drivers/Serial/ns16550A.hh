@@ -34,7 +34,7 @@ struct Regs {
     MMIO<uint8_t> scr_;     // (rw) Scratch Register, it has only limited use.
 };
 
-enum IER : uint8_t {
+enum IER : uint8_t { // NOLINT(cppcoreguidelines-use-enum-class) bitmask flags
     RXEN= 0x01, // Received data available
     TXEN= 0x02, // Transmitter holding register enable
     RLSC= 0x04, // Receiver line status register change
@@ -46,7 +46,7 @@ enum IER : uint8_t {
     // IER_NU2 = 0x80, // Reserved
 };
 
-enum IIR : uint8_t {
+enum IIR : uint8_t { // NOLINT(cppcoreguidelines-use-enum-class) bitmask flags
     IP  = 0x01, // Interrupt pending
     MSC1= 0x02, // Modem status change
     MSC2= 0x04,
@@ -59,7 +59,7 @@ enum IIR : uint8_t {
     FE2= 0x80, // FIFO enabled
 };
 
-enum FCR : uint8_t {
+enum FCR : uint8_t { // NOLINT(cppcoreguidelines-use-enum-class) bitmask flags
     FIFOEN = 0x01, // Enable FIFO's
     RCVRCLR= 0x02, // Clear receive FIFO
     XMITCLR= 0x04, // Clear transmit FIFO
@@ -71,7 +71,7 @@ enum FCR : uint8_t {
     RCVR_MSB= 0x80, //
 };
 
-enum LCR : uint8_t {
+enum LCR : uint8_t { // NOLINT(cppcoreguidelines-use-enum-class) bitmask flags
     WLS1= 0x01, // Word length select, 0b00= 5b, 0b01= 6b, 0b10= 7b, 0b11= 8b
     WLS2= 0x02,
 
@@ -85,7 +85,7 @@ enum LCR : uint8_t {
     DLAB= 0x80, // Divisor latch access bit
 };
 
-enum MCR : uint8_t {
+enum MCR : uint8_t { // NOLINT(cppcoreguidelines-use-enum-class) bitmask flags
     DTR = 0x01, // Data terminal ready
     RTS = 0x02, // Request to send
     OP1 = 0x04, // Auxiliary output 1
@@ -96,7 +96,7 @@ enum MCR : uint8_t {
     // MCR_NU2 = 0x80, // Reserved
 };
 
-enum LSR : uint8_t {
+enum LSR : uint8_t { // NOLINT(cppcoreguidelines-use-enum-class) bitmask flags
     DR    = 0x01, // Data ready
     OER   = 0x02, // Overrun error
     PER   = 0x04, // Parity error
@@ -107,7 +107,7 @@ enum LSR : uint8_t {
     FIFOER= 0x80, // Error in received FIFO
 };
 
-enum MSR : uint8_t {
+enum MSR : uint8_t { // NOLINT(cppcoreguidelines-use-enum-class) bitmask flags
     DCTS= 0x01, // Delta clear to send
     DDSR= 0x02, // Delta data set ready
     DRI = 0x04, // Trailing edge ring indicator

@@ -70,13 +70,13 @@ function(AddRISCVTst target)
     add_executable(${target} ${ARG_SOURCES})
 
     set(compileOpts
-        ${specsFile}
+        ${compileSpecs}
         -march=${ARG_MARCH}
         -mabi=${ARG_ABI}
     )
 
     set(linkOpts
-        ${specsFile}
+        ${compileSpecs}
         -T ${linkerPath}/qemu-virt_rv.ld
         -march=${ARG_MARCH}
         -mabi=${ARG_ABI}
