@@ -2,7 +2,7 @@
 
 #include <cstddef>
 
-/** One sample assembly line per RV32I (+ Zifencei fence.i) mnemonic supported by INST. */
+/** One sample assembly line per RV32I (+ Zifencei fence.i / Zicsr CSR) mnemonic supported by INST. */
 struct Rv32iInstructionCase {
     const char *assembly;
     const char *expectedMnemonic;
@@ -51,6 +51,12 @@ inline constexpr Rv32iInstructionCase kRv32iInstructionCases[] {
     { "lui x1, 0x12345", "lui", "RV32I" },
     { "auipc x1, 0x12345", "auipc", "RV32I" },
     { "jal x1, 4", "jal", "RV32I" },
+    { "csrrw x1, 0x300, x2", "csrrw", "Zicsr" },
+    { "csrrs x1, 0x300, x2", "csrrs", "Zicsr" },
+    { "csrc x1, 0x300, x2", "csrc", "Zicsr" },
+    { "csrrwi x1, 0x300, 5", "csrrwi", "Zicsr" },
+    { "csrrsi x1, 0x300, 5", "csrrsi", "Zicsr" },
+    { "csrrci x1, 0x300, 5", "csrrci", "Zicsr" },
 };
 
 inline constexpr std::size_t kRv32iInstructionCaseCount= sizeof(kRv32iInstructionCases) / sizeof(kRv32iInstructionCases[0]);

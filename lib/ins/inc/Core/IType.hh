@@ -15,13 +15,29 @@ constexpr uint16_t OPC_F3(uint8_t opc, uint8_t f3)
 {
     return (static_cast<uint16_t>(opc) << 8) | static_cast<uint16_t>(f3 & 7);
 }
+// SYSTEM (0x73): ecall/ebreak key is (0x73 << 8) | imm (ecall: 0, ebreak: 1).
+constexpr uint16_t SYSTEM(uint8_t imm)
+{
+    return (static_cast<uint16_t>(0x73) << 8) | static_cast<uint16_t>(imm & 0xFF);
+}
+// Zicsr (0x73): CSR ops key is (0x73 << 8) | (funct3 << 4); the csr number is operand data, not part of the key.
+constexpr uint16_t CSR(uint8_t f3)
+{
+    return (static_cast<uint16_t>(0x73) << 8) | (static_cast<uint16_t>(f3 & 7) << 4);
+}
+// True when a SYSTEM (0x73) table key identifies a Zicsr CSR operation.
+constexpr bool IS_CSR(uint16_t key)
+{
+    return ((key >> 4) & 7) != 0;
+}
 
 } // namespace ITypeKey
 
 class IType: public IBaseInstType {
 public:
-    // RV32I / Zifencei: OP-IMM rows use funct_ = (imm[11:5]<<3)|funct3; other opcodes use (opcode<<8)|funct3.
-    constexpr static std::array<InstInfo, 19> G_INST_TABLE= {
+    // RV32I / Zifencei / Zicsr: OP-IMM rows use funct_ = (imm[11:5]<<3)|funct3; other opcodes use (opcode<<8)|funct3;
+    // SYSTEM rows use ITypeKey::SYSTEM()/CSR().
+    constexpr static std::array<InstInfo, 25> G_INST_TABLE= {
         { { .name_="lb",    .XLEN_="RV32I",   .funct_=ITypeKey::OPC_F3(0x03, 0), .opcode_=0x03 },
           { .name_="lh",    .XLEN_="RV32I",   .funct_=ITypeKey::OPC_F3(0x03, 1), .opcode_=0x03 },
           { .name_="lw",    .XLEN_="RV32I",   .funct_=ITypeKey::OPC_F3(0x03, 2), .opcode_=0x03 },
@@ -43,8 +59,15 @@ public:
           { .name_="fence",   .XLEN_="RV32I", .funct_=ITypeKey::OPC_F3(0x0F, 0), .opcode_=0x0F },
           { .name_="fence.i", .XLEN_="Zifencei", .funct_=ITypeKey::OPC_F3(0x0F, 1), .opcode_=0x0F },
 
-          { .name_="ecall",  .XLEN_="RV32I", .funct_=static_cast<uint16_t>((0x73u << 8) | 0u), .opcode_=0x73 },
-          { .name_="ebreak", .XLEN_="RV32I", .funct_=static_cast<uint16_t>((0x73u << 8) | 1u), .opcode_=0x73 } }
+          { .name_="ecall",  .XLEN_="RV32I", .funct_=ITypeKey::SYSTEM(0), .opcode_=0x73 },
+          { .name_="ebreak", .XLEN_="RV32I", .funct_=ITypeKey::SYSTEM(1), .opcode_=0x73 },
+
+          { .name_="csrrw",  .XLEN_="Zicsr", .funct_=ITypeKey::CSR(1), .opcode_=0x73 },
+          { .name_="csrrs",  .XLEN_="Zicsr", .funct_=ITypeKey::CSR(2), .opcode_=0x73 },
+          { .name_="csrc",   .XLEN_="Zicsr", .funct_=ITypeKey::CSR(3), .opcode_=0x73 },
+          { .name_="csrrwi", .XLEN_="Zicsr", .funct_=ITypeKey::CSR(5), .opcode_=0x73 },
+          { .name_="csrrsi", .XLEN_="Zicsr", .funct_=ITypeKey::CSR(6), .opcode_=0x73 },
+          { .name_="csrrci", .XLEN_="Zicsr", .funct_=ITypeKey::CSR(7), .opcode_=0x73 } }
     };
 
 public:

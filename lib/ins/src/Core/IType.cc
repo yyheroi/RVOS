@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 
 #include "Core/IType.hh"
 #include "ISA/Regs.hpp"
@@ -35,6 +36,21 @@ void IType::mnemonicHelper()
 {
     const uint32_t opc= Layout_.I.opc;
     if(opc == 0x73) {
+        if(Layout_.I.fct3 != 0) { // Zicsr: `csrrw rd, csr, rs1` / `csrrwi rd, csr, zimm`
+            const auto rd = isa::LOOKUP_REG_NAME(Layout_.I.rd, HasSetABI_);
+            std::ostringstream csrOs;
+            csrOs << "0x" << std::hex << (Layout_.I.imm0tB & 0xFFF);
+            const std::string csrStr= csrOs.str();
+
+            if(Layout_.I.fct3 >= 5) { // immediate form: last operand is zimm
+                const std::string zimmStr= std::to_string(Layout_.I.rs1);
+                appendOperands({" ", rd, ",", std::string_view(csrStr), ",", std::string_view(zimmStr) });
+            } else {
+                const auto rs1= isa::LOOKUP_REG_NAME(Layout_.I.rs1, HasSetABI_);
+                appendOperands({" ", rd, ",", std::string_view(csrStr), ",", rs1 });
+            }
+            return;
+        }
         if(InstAssembly_.size() > 1) {
             InstAssembly_.resize(1);
         }
@@ -81,35 +97,50 @@ const InstLayout &IType::Assembly()
         Layout_.I.fct3  = key & 7;
         Layout_.I.imm0tB= (static_cast<uint32_t>((key >> 3) & 0x7F) << 5);
     } else if(info.opcode_ == 0x73) {
-        // Key is (0x73 << 8) | imm (ecall: 0, ebreak: 1); take only the low byte.
-        Layout_.I.fct3  = 0;
-        Layout_.I.imm0tB= static_cast<uint32_t>(key & 0xFF);
+        if(ITypeKey::IS_CSR(key)) { // Zicsr: funct3 from key; csr# comes from operands
+            Layout_.I.fct3  = (key >> 4) & 7;
+            Layout_.I.imm0tB= 0;
+        } else { // ecall / ebreak
+            Layout_.I.fct3  = 0;
+            Layout_.I.imm0tB= static_cast<uint32_t>(key & 0xFF);
+        }
     } else {
         Layout_.I.fct3  = key & 7;
         Layout_.I.imm0tB= 0;
     }
 
-    if(info.opcode_ == 0x73) {
+    if(info.opcode_ == 0x73 && Layout_.I.fct3 == 0) { // ecall / ebreak carry no operands
         Layout_.I.rd = 0;
         Layout_.I.rs1= 0;
     }
 
     if(!InstAssembly_.empty() && InstAssembly_.size() >= 4) {
-        if(auto rdOpt= isa::LOOKUP_REG_IDX(InstAssembly_.at(1))) {
-            Layout_.I.rd= *rdOpt;
-        }
-        if(auto rs1Opt= isa::LOOKUP_REG_IDX(InstAssembly_.at(2))) {
-            Layout_.I.rs1= *rs1Opt;
-        }
-        const int32_t imm= std::stoi(InstAssembly_.at(3));
-        if(info.opcode_ == 0x13) {
-            if(Layout_.I.fct3 == 1 || Layout_.I.fct3 == 5) {
-                Layout_.I.imm0tB= (Layout_.I.imm0tB & UINT32_C(0xFE0)) | (static_cast<uint32_t>(imm) & 0x1F);
-            } else {
+        if(info.opcode_ == 0x73 && Layout_.I.fct3 != 0) {
+            // Zicsr: `csrrw rd, csr, rs1` / `csrrwi rd, csr, zimm`
+            if(auto rdOpt= isa::LOOKUP_REG_IDX(InstAssembly_.at(1))) {
+                Layout_.I.rd= *rdOpt;
+            }
+            Layout_.I.imm0tB= static_cast<uint32_t>(std::stoi(InstAssembly_.at(2), nullptr, 0)) & 0xFFF;
+            if(auto rs1Opt= isa::LOOKUP_REG_IDX(InstAssembly_.at(3))) {
+                Layout_.I.rs1= *rs1Opt;
+            }
+        } else {
+            if(auto rdOpt= isa::LOOKUP_REG_IDX(InstAssembly_.at(1))) {
+                Layout_.I.rd= *rdOpt;
+            }
+            if(auto rs1Opt= isa::LOOKUP_REG_IDX(InstAssembly_.at(2))) {
+                Layout_.I.rs1= *rs1Opt;
+            }
+            const int32_t imm= std::stoi(InstAssembly_.at(3));
+            if(info.opcode_ == 0x13) {
+                if(Layout_.I.fct3 == 1 || Layout_.I.fct3 == 5) {
+                    Layout_.I.imm0tB= (Layout_.I.imm0tB & UINT32_C(0xFE0)) | (static_cast<uint32_t>(imm) & 0x1F);
+                } else {
+                    Layout_.I.imm0tB= static_cast<uint32_t>(imm) & 0xFFF;
+                }
+            } else if(info.opcode_ != 0x73) {
                 Layout_.I.imm0tB= static_cast<uint32_t>(imm) & 0xFFF;
             }
-        } else if(info.opcode_ != 0x73) {
-            Layout_.I.imm0tB= static_cast<uint32_t>(imm) & 0xFFF;
         }
     }
 
@@ -125,7 +156,11 @@ IBaseInstType::KeyT IType::calculateFunctKey()
         FunctKey_= static_cast<KeyT>(((Layout_.I.imm0tB >> 5) << 3) | Layout_.I.fct3);
         break;
     case 0x73:
-        FunctKey_= static_cast<KeyT>((0x73u << 8) | (Layout_.I.imm0tB & 0xFFFu));
+        if(Layout_.I.fct3 != 0) { // Zicsr: key on funct3 only; csr# is operand data
+            FunctKey_= static_cast<KeyT>((0x73u << 8) | (static_cast<uint32_t>(Layout_.I.fct3) << 4));
+        } else {
+            FunctKey_= static_cast<KeyT>((0x73u << 8) | (Layout_.I.imm0tB & 0xFFFu));
+        }
         break;
     default:
         FunctKey_= static_cast<KeyT>((static_cast<uint32_t>(Layout_.I.opc) << 8) | Layout_.I.fct3);
