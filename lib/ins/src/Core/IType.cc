@@ -81,8 +81,9 @@ const InstLayout &IType::Assembly()
         Layout_.I.fct3  = key & 7;
         Layout_.I.imm0tB= (static_cast<uint32_t>((key >> 3) & 0x7F) << 5);
     } else if(info.opcode_ == 0x73) {
+        // Key is (0x73 << 8) | imm (ecall: 0, ebreak: 1); take only the low byte.
         Layout_.I.fct3  = 0;
-        Layout_.I.imm0tB= static_cast<uint32_t>(key & 0xFFF);
+        Layout_.I.imm0tB= static_cast<uint32_t>(key & 0xFF);
     } else {
         Layout_.I.fct3  = key & 7;
         Layout_.I.imm0tB= 0;
