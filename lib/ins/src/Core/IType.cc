@@ -1,8 +1,53 @@
+#include <cctype>
 #include <iostream>
 #include <sstream>
+#include <string>
 
 #include "Core/IType.hh"
 #include "ISA/Regs.hpp"
+
+namespace {
+// fence pred/succ nibble bit values: i=8, o=4, r=2, w=1 (spec letter order "iorw").
+constexpr uint32_t FENCE_I= 8, FENCE_O= 4, FENCE_R= 2, FENCE_W= 1;
+
+// Render one pred/succ nibble as iorw-style text; a zero nibble prints "0".
+std::string fenceNibbleText(uint32_t nibble)
+{
+    nibble&= UINT32_C(0xF);
+    if(0 == nibble) {
+        return "0";
+    }
+    std::string text;
+    if((nibble & FENCE_I) != 0) { text += 'i'; }
+    if((nibble & FENCE_O) != 0) { text += 'o'; }
+    if((nibble & FENCE_R) != 0) { text += 'r'; }
+    if((nibble & FENCE_W) != 0) { text += 'w'; }
+    return text;
+}
+
+// Parse one pred/succ operand: an iorw letter set ("w", "ior") or a numeric nibble ("0", "0xf").
+uint32_t fenceNibbleBits(const std::string &token)
+{
+    uint32_t bits= 0;
+    bool letters= !token.empty();
+    for(const char c: token) {
+        switch(std::tolower(static_cast<unsigned char>(c))) {
+        case 'i': bits |= FENCE_I; break;
+        case 'o': bits |= FENCE_O; break;
+        case 'r': bits |= FENCE_R; break;
+        case 'w': bits |= FENCE_W; break;
+        default:  letters= false; break;
+        }
+        if(!letters) {
+            break;
+        }
+    }
+    if(letters) {
+        return bits;
+    }
+    return static_cast<uint32_t>(std::stoul(token, nullptr, 0)) & UINT32_C(0xF);
+}
+} // namespace
 
 IType::IType(uint32_t inst, InstFormat format, bool hasSetABI)
     : IBaseInstType(inst, format, hasSetABI)
@@ -61,8 +106,16 @@ void IType::mnemonicHelper()
     const std::string immStr= std::to_string(imm);
 
     if(opc == 0x0F) {
-        auto z= isa::LOOKUP_REG_NAME(0, HasSetABI_);
-        appendOperands({" ", z, ",", z, ",", std::string_view(immStr) });
+        if(Layout_.I.fct3 != 0) { // fence.i: no operands
+            if(InstAssembly_.size() > 1) {
+                InstAssembly_.resize(1);
+            }
+            return;
+        }
+        // fence: `pred, succ` occupy imm[7:4] / imm[3:0] (instruction bits [27:24] / [23:20]); fm must be zero.
+        const std::string pred= fenceNibbleText(Layout_.I.imm0tB >> 4);
+        const std::string succ= fenceNibbleText(Layout_.I.imm0tB);
+        appendOperands({" ", std::string_view(pred), ",", std::string_view(succ) });
         return;
     }
 
@@ -114,7 +167,20 @@ const InstLayout &IType::Assembly()
         Layout_.I.rs1= 0;
     }
 
-    if(!InstAssembly_.empty() && InstAssembly_.size() >= 4) {
+    if(info.opcode_ == 0x0F) { // MISC-MEM: rd/rs1 are zero; fm comes from pred/succ
+        Layout_.I.rd = 0;
+        Layout_.I.rs1= 0;
+        if(Layout_.I.fct3 != 0) { // fence.i: no operands
+            Layout_.I.imm0tB= 0;
+        } else if(InstAssembly_.size() == 1) { // bare `fence` means `fence iorw, iorw`
+            Layout_.I.imm0tB= UINT32_C(0xFF);
+        } else if(InstAssembly_.size() == 3) { // spec form: `fence pred, succ`
+            Layout_.I.imm0tB= (fenceNibbleBits(InstAssembly_.at(1)) << 4)
+                            |  fenceNibbleBits(InstAssembly_.at(2));
+        } else if(InstAssembly_.size() >= 4) { // legacy numeric form: `fence rd, rs1, imm`
+            Layout_.I.imm0tB= static_cast<uint32_t>(std::stoul(InstAssembly_.at(3), nullptr, 0)) & UINT32_C(0xFFF);
+        }
+    } else if(!InstAssembly_.empty() && InstAssembly_.size() >= 4) {
         if(info.opcode_ == 0x73 && Layout_.I.fct3 != 0) {
             // Zicsr: `csrrw rd, csr, rs1` / `csrrwi rd, csr, zimm`
             if(auto rdOpt= isa::LOOKUP_REG_IDX(InstAssembly_.at(1))) {
